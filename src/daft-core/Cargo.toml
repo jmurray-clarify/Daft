@@ -53,7 +53,7 @@ unicode-normalization = "0.1.23"
 [dependencies.image]
 default-features = false
 features = ["gif", "jpeg", "ico", "png", "tiff", "webp", "bmp", "hdr"]
-version = "0.24.7"
+version = "0.25.2"
 
 [dependencies.numpy]
 optional = true
