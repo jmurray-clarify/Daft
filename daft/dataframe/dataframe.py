@@ -286,7 +286,9 @@ class DataFrame:
                     yield row
 
     @DataframePublicAPI
-    def to_arrow_iter(self, results_buffer_size: Optional[int] = 1) -> Iterator["pyarrow.RecordBatch"]:
+    def to_arrow_iter(
+        self, results_buffer_size: Optional[int] = 1, cast_tensors_to_ray_tensor_dtype: bool = False
+    ) -> Iterator["pyarrow.RecordBatch"]:
         """
         Return an iterator of pyarrow recordbatches for this dataframe.
         """
@@ -295,8 +297,12 @@ class DataFrame:
         if self._result is not None:
             # If the dataframe has already finished executing,
             # use the precomputed results.
-            yield from self.to_arrow().to_batches()
-
+            for _, result in self._result.items():
+                yield from (
+                    result.vpartition()
+                    .to_arrow(cast_tensors_to_ray_tensor_dtype=cast_tensors_to_ray_tensor_dtype)
+                    .to_batches()
+                )
         else:
             # Execute the dataframe in a streaming fashion.
             context = get_context()
@@ -304,7 +310,9 @@ class DataFrame:
 
             # Iterate through partitions.
             for partition in partitions_iter:
-                yield from partition.to_arrow().to_batches()
+                yield from partition.to_arrow(
+                    cast_tensors_to_ray_tensor_dtype=cast_tensors_to_ray_tensor_dtype
+                ).to_batches()
 
     @DataframePublicAPI
     def iter_partitions(
@@ -2501,11 +2509,13 @@ class DataFrame:
             .. NOTE::
                 This call is **blocking** and will execute the DataFrame when called
         """
-        self.collect()
-        result = self._result
-        assert result is not None
+        import pyarrow as pa
 
-        return result.to_arrow(cast_tensors_to_ray_tensor_dtype)
+        arrow_rb_iter = self.to_arrow_iter(
+            results_buffer_size=None,  # Hardcoded for now, we can pass it through
+            cast_tensors_to_ray_tensor_dtype=cast_tensors_to_ray_tensor_dtype,
+        )
+        return pa.Table.from_batches(arrow_rb_iter)
 
     @DataframePublicAPI
     def to_pydict(self) -> Dict[str, List[Any]]:
