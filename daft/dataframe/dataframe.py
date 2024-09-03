@@ -2515,7 +2515,7 @@ class DataFrame:
             results_buffer_size=None,  # Hardcoded for now, we can pass it through
             cast_tensors_to_ray_tensor_dtype=cast_tensors_to_ray_tensor_dtype,
         )
-        return pa.Table.from_batches(arrow_rb_iter)
+        return pa.Table.from_batches(arrow_rb_iter, schema=self.schema().to_pyarrow_schema())
 
     @DataframePublicAPI
     def to_pydict(self) -> Dict[str, List[Any]]:
