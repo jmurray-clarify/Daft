@@ -287,7 +287,7 @@ class DataFrame:
 
     @DataframePublicAPI
     def to_arrow_iter(
-        self, results_buffer_size: Optional[int] = 1, cast_tensors_to_ray_tensor_dtype: bool = False
+        self, results_buffer_size: Optional[int] = 1, _cast_tensors_to_ray_tensor_dtype: bool = False
     ) -> Iterator["pyarrow.RecordBatch"]:
         """
         Return an iterator of pyarrow recordbatches for this dataframe.
@@ -300,7 +300,7 @@ class DataFrame:
             for _, result in self._result.items():
                 yield from (
                     result.vpartition()
-                    .to_arrow(cast_tensors_to_ray_tensor_dtype=cast_tensors_to_ray_tensor_dtype)
+                    .to_arrow(cast_tensors_to_ray_tensor_dtype=_cast_tensors_to_ray_tensor_dtype)
                     .to_batches()
                 )
         else:
@@ -311,7 +311,7 @@ class DataFrame:
             # Iterate through partitions.
             for partition in partitions_iter:
                 yield from partition.to_arrow(
-                    cast_tensors_to_ray_tensor_dtype=cast_tensors_to_ray_tensor_dtype
+                    cast_tensors_to_ray_tensor_dtype=_cast_tensors_to_ray_tensor_dtype
                 ).to_batches()
 
     @DataframePublicAPI
@@ -2513,7 +2513,7 @@ class DataFrame:
 
         arrow_rb_iter = self.to_arrow_iter(
             results_buffer_size=None,  # Hardcoded for now, we can pass it through
-            cast_tensors_to_ray_tensor_dtype=cast_tensors_to_ray_tensor_dtype,
+            _cast_tensors_to_ray_tensor_dtype=cast_tensors_to_ray_tensor_dtype,
         )
         return pa.Table.from_batches(arrow_rb_iter, schema=self.schema().to_pyarrow_schema())
 
