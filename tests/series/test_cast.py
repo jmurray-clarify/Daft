@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import itertools
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 
 import numpy as np
 import pandas as pd
@@ -600,6 +600,29 @@ def test_series_cast_timestamp(input_t, input, output_t, output) -> None:
 
 
 @pytest.mark.parametrize(
+    ["input_t", "input", "output_t", "output"],
+    [
+        (
+            DataType.time("ns"),
+            1000,
+            DataType.time("us"),
+            time(0, 0, 0, 1),
+        ),
+        (
+            DataType.time("us"),
+            1,
+            DataType.time("ns"),
+            time(0, 0, 0, 1),
+        ),
+    ],
+)
+def test_series_cast_time(input_t, input, output_t, output) -> None:
+    series = Series.from_pylist([input]).cast(input_t)
+    res = series.cast(output_t).to_pylist()[0]
+    assert res == output
+
+
+@pytest.mark.parametrize(
     ["timeunit", "sec_str"],
     [
         (TimeUnit.s(), ":01"),
@@ -724,6 +747,24 @@ def test_series_cast_numeric_logical(dtype, result_n1, result_0, result_p1) -> N
             datetime(1970, 1, 1, 0, 0, 0, 0),
             datetime(1970, 1, 1, 0, 0, 0, 1),
         ),
+    ],
+)
+def test_series_cast_timestamp_numeric(dtype, result_n1, result_0, result_p1) -> None:
+    # Timestamp -> numeric.
+    series = Series.from_pylist([result_n1, result_0, result_p1]).cast(dtype)
+    casted = series.cast(DataType.int64())
+    assert casted.to_pylist() == [-1, 0, 1]
+
+
+@pytest.mark.parametrize(
+    ["dtype", "result_n1", "result_0", "result_p1"],
+    [
+        (
+            DataType.duration(TimeUnit.us()),
+            timedelta(microseconds=-1),
+            timedelta(microseconds=0),
+            timedelta(microseconds=1),
+        ),
         # Casting between duration types is currently not supported in Arrow2.
         # (
         #     DataType.duration(TimeUnit.s()),
@@ -737,19 +778,55 @@ def test_series_cast_numeric_logical(dtype, result_n1, result_0, result_p1) -> N
         #     timedelta(milliseconds=0),
         #     timedelta(milliseconds=1),
         # ),
-        (
-            DataType.duration(TimeUnit.us()),
-            timedelta(microseconds=-1),
-            timedelta(microseconds=0),
-            timedelta(microseconds=1),
-        ),
     ],
 )
-def test_series_cast_logical_numeric(dtype, result_n1, result_0, result_p1) -> None:
-    # Logical -> numeric.
+def test_series_cast_duration_numeric(dtype, result_n1, result_0, result_p1) -> None:
+    # Duration -> numeric.
     series = Series.from_pylist([result_n1, result_0, result_p1]).cast(dtype)
     casted = series.cast(DataType.int64())
     assert casted.to_pylist() == [-1, 0, 1]
+
+
+@pytest.mark.parametrize(
+    ["dtype", "result_n1", "result_0", "result_p1"],
+    [
+        (
+            DataType.date(),
+            date(1969, 12, 31),
+            date(1970, 1, 1),
+            date(1970, 1, 2),
+        ),
+    ],
+)
+def test_series_cast_date_numeric(dtype, result_n1, result_0, result_p1) -> None:
+    # Date -> numeric.
+    series = Series.from_pylist([result_n1, result_0, result_p1]).cast(dtype)
+    casted = series.cast(DataType.int64())
+    assert casted.to_pylist() == [-1, 0, 1]
+
+
+@pytest.mark.parametrize(
+    ["dtype", "result_n1", "result_0", "result_p1"],
+    [
+        (
+            DataType.time("us"),
+            time(0, 0, 0),
+            time(0, 0, 1),
+            time(0, 0, 2),
+        ),
+        (
+            DataType.time("ns"),
+            time(0, 0, 0),
+            time(0, 0, 0, 1000),
+            time(0, 0, 0, 2000),
+        ),
+    ],
+)
+def test_series_cast_time_numeric(dtype, result_n1, result_0, result_p1) -> None:
+    # Time -> numeric.
+    series = Series.from_pylist([result_n1, result_0, result_p1]).cast(dtype)
+    casted = series.cast(DataType.int64())
+    assert casted.to_pylist() == [0, 1_000_000, 2_000_000]
 
 
 def test_series_cast_struct_col_reordering() -> None:
